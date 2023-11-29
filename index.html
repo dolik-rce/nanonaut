@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Operace nanonaut</title>
+    </head>
+    <body>
+        <script>
+// KONSTANTY
+var MIN_VZDALENOST_MEZI_ROBOTY = 200;
+var MAX_VZDALENOST_MEZI_ROBOTY = 1200;
+var MAX_AKTIVNICH_ROBOTU = 5;
+var NANONAUT_ANIMACE_RYCHLOST = 3;
+var ROBOT_WIDTH = 141;
+var ROBOT_HEIGHT = 139;
+var ROBOT_POCET_SNIMKU_ANIMACE = 9;
+var ROBOT_ANIMACE_RYCHLOST = 5;
+var ROBOT_X_RYCHLOST = 6;
+var NANONAUT_POCET_SNIMKU_ANIMACE = 7;
+var POZADI_WIDTH = 1000;
+var NANONAUT_X_RYCHLOST = 5;
+var NANONAUT_SKOK_RYCHLOST = 20;
+var MEZERNIK_KOD = 32;
+var CANVAS_WIDTH = 800;
+var CANVAS_HEIGHT = 600;
+var NANONAUT_WIDTH = 181;
+var NANONAUT_HEIGHT = 229;
+var ZEME_Y  = 540;
+var NANONAUT_Y_ZRYCHLENI = 1;
+// NASTAVENÍ
+var zdravi = 100;
+var skore = 0;
+var robotData = [];
+var hraSnimkyPocitadlo  = 0;
+var nanonautYRychlost = 0;
+var nanonautVeVzduchu = false;
+var kameraX = 0;
+var kameraY = 0;
+var mezernikStisknuty = false;
+var nanonautSnimekNr = 0;
+var canvas = document.createElement('canvas');
+var c = canvas.getContext('2d');
+canvas.width = CANVAS_WIDTH;
+canvas.height = CANVAS_HEIGHT;
+document.body.appendChild(canvas);
+
+var nanonautImage = new Image();
+nanonautImage.src = 'animatedNanonaut.png';
+
+var ker1Image = new Image();
+ker1Image.src = 'bush1.png';
+
+var ker2Image = new Image();
+ker2Image.src = 'bush2.png';
+
+var robotImage = new Image();
+robotImage.src = 'animatedRobot.png';
+
+var robotSpriteSheet = {
+    pocetSnimkuVRade: 3,
+    spriteWidth: ROBOT_WIDTH,
+    spriteHeight: ROBOT_HEIGHT,
+    image: robotImage
+};
+var pozadiImage = new Image();
+pozadiImage.src = 'background.png';
+
+var nanonautSpriteSheet = {
+    pocetSnimkuVRade: 5,
+    spriteWidth: NANONAUT_WIDTH,
+    spriteHeight: NANONAUT_HEIGHT,
+    image: nanonautImage
+};
+
+var kerData = generovaniKeru();
+var nanonautX = CANVAS_WIDTH / 2;
+var nanonautY = ZEME_Y - NANONAUT_HEIGHT;
+window.addEventListener('keydown', onKeyDown);
+window.addEventListener('keyup', onKeyUp);
+
+window.addEventListener('load', start);
+
+function start() {
+    window.requestAnimationFrame(mainLoop);
+}
+function generovaniKeru() {
+    var dataGenerovanychKeru = [];
+    var kerX = 0;
+    while (kerX < (2 * CANVAS_WIDTH)) {
+        var kerImage;
+        if (Math.random() >= 0.5) {
+            kerImage = ker1Image;
+        } else {
+            kerImage = ker2Image;
+        }
+        dataGenerovanychKeru.push({
+            x: kerX,
+            y: 80 + Math.random() * 20,
+            image: kerImage
+        });
+        kerX += 150 + Math.random() * 200;
+    }
+    return dataGenerovanychKeru;
+}
+// HLAVNÍ SMYČKA
+function mainLoop() {
+    update();
+    draw();
+    if (zdravi > 0) {
+        window.requestAnimationFrame(mainLoop);
+    }
+}
+// REAKCE HRÁČE
+function onKeyDown(event){
+    if(event.keyCode === MEZERNIK_KOD) {
+        mezernikStisknuty = true;
+    }
+}
+function onKeyUp (event) {
+    if (event.keyCode === MEZERNIK_KOD) {
+        mezernikStisknuty = false;
+    }
+}
+//AKTUALIZACE
+function update() {
+    hraSnimkyPocitadlo = hraSnimkyPocitadlo + 1;
+    nanonautX = nanonautX + NANONAUT_X_RYCHLOST;
+    if (mezernikStisknuty && !nanonautVeVzduchu) {
+        nanonautYRychlost = -NANONAUT_SKOK_RYCHLOST;
+        nanonautVeVzduchu = true;
+    }
+    //Aktualizace Nanonauta.
+    nanonautY = nanonautY + nanonautYRychlost;
+    nanonautYRychlost = nanonautYRychlost + NANONAUT_Y_ZRYCHLENI;
+    if (nanonautY > (ZEME_Y - NANONAUT_HEIGHT)) {
+        nanonautY = ZEME_Y - NANONAUT_HEIGHT;
+        nanonautYRychlost = 0;
+        nanonautVeVzduchu = false;
+    }
+    //Aktualizace animace
+    if ((hraSnimkyPocitadlo % NANONAUT_ANIMACE_RYCHLOST) === 0) {
+        nanonautSnimekNr = nanonautSnimekNr + 1;
+        if(nanonautSnimekNr >= NANONAUT_POCET_SNIMKU_ANIMACE) {
+            nanonautSnimekNr = 0;
+        }
+    }
+    // Aktualizace kamery
+    kameraX = nanonautX - 150;
+    //Aktualizace keřů
+    for (var i=0; i<kerData.length; i++) {
+        if ((kerData[i].x - kameraX) < -CANVAS_WIDTH) {
+            kerData[i].x += (2 * CANVAS_WIDTH) + 150;
+        }
+    }
+    //Aktualizace robotů
+    updateRoboti();
+
+    // Kontrola dotyku s robotem
+    for (var i=0; i<robotData.length; i++) {
+        var r = robotData[i];
+        var zasah = prekryvajiSe(nanonautX + 50, NANONAUT_WIDTH - 100, nanonautY + 50, NANONAUT_HEIGHT - 100,
+                                 r.x, ROBOT_WIDTH, r.y, ROBOT_HEIGHT);
+        if (zasah) {
+            if (!nanonautVeVzduchu || nanonautYRychlost <= 0) {
+                zdravi -= 1;
+            } else {nanonautYRychlost
+                skore += 100;
+                robotData.splice(i, 1);
+            }
+        }
+    }
+}
+
+function updateRoboti() {
+    // Pohyb a animace robotů
+    for (var i=0; i<robotData.length; i++) {
+        robotData[i].x -=ROBOT_X_RYCHLOST;
+        if ((hraSnimkyPocitadlo % ROBOT_ANIMACE_RYCHLOST) === 0) {
+            robotData[i].snimekNr = robotData[i].snimekNr + 1;
+            if (robotData[i].snimekNr >= ROBOT_POCET_SNIMKU_ANIMACE) {
+                robotData[i].snimekNr = 0;
+            }
+        }
+    }
+    // Odstranění robotů, kteří jsou mimo obrazovku.
+    var robotIndex = 0;
+    while (robotIndex < robotData.length) {
+        if (robotData[robotIndex].x < kameraX - ROBOT_WIDTH) {
+            robotData.splice(robotIndex, 1);
+        }else{
+            robotIndex += 1;
+        }
+    }
+
+    if(robotData.length < MAX_AKTIVNICH_ROBOTU) {
+        var posledniRobotX = CANVAS_WIDTH;
+        if (robotData.length > 0) {
+        var posledniRobotX = robotData[robotData.length - 1].x;
+    }
+        var novyRobotX = posledniRobotX + MIN_VZDALENOST_MEZI_ROBOTY + Math.random() * (MAX_VZDALENOST_MEZI_ROBOTY - MIN_VZDALENOST_MEZI_ROBOTY);
+        robotData.push({
+            x: novyRobotX,
+            y: ZEME_Y - ROBOT_HEIGHT,
+            snimekNr:0
+        });
+    }
+}
+
+function prekryvajiSe(n_x, n_sirka, n_y, n_vyska, r_x, r_sirka, r_y, r_vyska) {
+    var prekryva_se_x = (n_x + n_sirka > r_x) && (n_x < r_x + r_sirka);
+    var prekryva_se_y = (n_y + n_vyska > r_y) && (n_y < r_y + r_vyska);
+    return prekryva_se_x && prekryva_se_y;
+}
+
+//ZOBRAZENÍ
+function draw() {
+    // Zobrazení oblohy
+    c.fillStyle = 'rgb(135, 206, 250)';
+    c.fillRect(0, 0, CANVAS_WIDTH, ZEME_Y - 40);
+
+    //Zobrazení pozadí.
+    var pozadiX = - (kameraX % POZADI_WIDTH);
+    c.drawImage(pozadiImage, pozadiX, -210);
+    c.drawImage(pozadiImage, pozadiX + POZADI_WIDTH, -210);
+
+    //Zobrazení země
+    c.fillStyle = 'rgb(34, 139, 34)';
+    c.fillRect(0, ZEME_Y - 40, CANVAS_WIDTH, CANVAS_HEIGHT - ZEME_Y + 40);
+
+    //Zobrazit zdraví
+    c.fillStyle = "rgb(155, 0, 0)";
+    c.fillRect(70, 30, zdravi, -20);
+    c.fillStyle = "rgb(155, 0, 0)";
+    c.font = "20px courier";
+    c.textAlign = "left";
+    c.fillText(zdravi, 30, 30);
+
+    //Zobrazení keřů
+    for (var i=0; i<kerData.length; i++) {
+        c.drawImage(kerData[i].image, kerData[i].x - kameraX, ZEME_Y - kerData[i].y - kameraY);
+    }
+
+    //Zobrazení animovaného spritu
+    function zobrazAnimovanySprite (screenX, screenY, snimekNr,spriteSheet) {
+        var SpriteSheetRada = Math.floor (snimekNr / spriteSheet.pocetSnimkuVRade);
+        var spriteSheetSloupec = snimekNr % spriteSheet.pocetSnimkuVRade;
+        var spriteSheetX = spriteSheetSloupec * spriteSheet.spriteWidth;
+        var spriteSheetY = SpriteSheetRada * spriteSheet.spriteHeight;
+        c.drawImage(
+            spriteSheet.image,
+            spriteSheetX, spriteSheetY,
+            spriteSheet.spriteWidth, spriteSheet.spriteHeight, screenX, screenY,
+            spriteSheet.spriteWidth, spriteSheet.spriteHeight
+        );
+    }
+
+    //Zobrazení robotů.
+    for (var i=0; i<robotData.length; i++) {
+        zobrazAnimovanySprite(robotData[i].x - kameraX,
+        robotData[i].y - kameraY, robotData[i].snimekNr, robotSpriteSheet);
+    }
+    //Zobrazení Nanonauta.
+    zobrazAnimovanySprite(
+        nanonautX - kameraX, nanonautY - kameraY,
+        nanonautSnimekNr, nanonautSpriteSheet
+    );
+
+    c.font = "18px courier";
+    c.textAlign = "right";
+    c.fillStyle = "rgb(0,120,120)";
+    c.fillText(`${Math.floor(skore + (kameraX / 10))} bodů`, CANVAS_WIDTH - 30, 30);
+
+    if (zdravi <= 0) {
+        c.font = "80px arial";
+        c.textAlign = "center";
+        c.fillStyle = "rgb(0,0,120)";
+        c.fillText("Seš mrtvej ninjo!", CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2, CANVAS_WIDTH);
+    }
+}
+        </script>
+
+    </body>
+</html>

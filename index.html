@@ -4,6 +4,10 @@
         <title>Operace nanonaut</title>
     </head>
     <body>
+        <div id="info">
+            <h1>Operace nanonaut</h1>
+            Ovládání: mezerník nebo tlačítko myši<br>
+        </div>
         <script>
 // KONSTANTY
 var MIN_VZDALENOST_MEZI_ROBOTY = 200;
@@ -76,12 +80,27 @@ var nanonautX = CANVAS_WIDTH / 2;
 var nanonautY = ZEME_Y - NANONAUT_HEIGHT;
 window.addEventListener('keydown', onKeyDown);
 window.addEventListener('keyup', onKeyUp);
-
-window.addEventListener('load', start);
+window.addEventListener('mousedown', onMouseDown);
+window.addEventListener('mouseup', onMouseUp);
 
 function start() {
+    document.querySelector('#info').innerHTML = '';
+    zdravi = 100;
+    skore = 0;
+    robotData = [];
+    hraSnimkyPocitadlo  = 0;
+    nanonautYRychlost = 0;
+    nanonautVeVzduchu = false;
+    kameraX = 0;
+    kameraY = 0;
+    mezernikStisknuty = false;
+    nanonautSnimekNr = 0;
+    nanonautX = CANVAS_WIDTH / 2;
+    nanonautY = ZEME_Y - NANONAUT_HEIGHT;
+    console.log("start", kameraX, window.kameraX);
     window.requestAnimationFrame(mainLoop);
 }
+
 function generovaniKeru() {
     var dataGenerovanychKeru = [];
     var kerX = 0;
@@ -117,8 +136,23 @@ function onKeyDown(event){
 }
 function onKeyUp (event) {
     if (event.keyCode === MEZERNIK_KOD) {
+        if (hraSnimkyPocitadlo === 0) {
+            start();
+        }
+        if (zdravi === 0) {
+            start();
+        }
         mezernikStisknuty = false;
     }
+}
+function onMouseDown(event){
+    mezernikStisknuty = true;
+}
+function onMouseUp (event) {
+    if (hraSnimkyPocitadlo === 0) {
+        start();
+    }
+    mezernikStisknuty = false;
 }
 //AKTUALIZACE
 function update() {
@@ -194,8 +228,8 @@ function updateRoboti() {
     if(robotData.length < MAX_AKTIVNICH_ROBOTU) {
         var posledniRobotX = CANVAS_WIDTH;
         if (robotData.length > 0) {
-        var posledniRobotX = robotData[robotData.length - 1].x;
-    }
+            var posledniRobotX = robotData[robotData.length - 1].x;
+        }
         var novyRobotX = posledniRobotX + MIN_VZDALENOST_MEZI_ROBOTY + Math.random() * (MAX_VZDALENOST_MEZI_ROBOTY - MIN_VZDALENOST_MEZI_ROBOTY);
         robotData.push({
             x: novyRobotX,

@@ -82,6 +82,9 @@ window.addEventListener('keydown', onKeyDown);
 window.addEventListener('keyup', onKeyUp);
 window.addEventListener('mousedown', onMouseDown);
 window.addEventListener('mouseup', onMouseUp);
+window.addEventListener('touchstart', onMouseDown);
+window.addEventListener('touchend', onMouseUp);
+window.addEventListener('touchcancel', onMouseUp);
 
 function start() {
     document.querySelector('#info').innerHTML = '';
@@ -136,10 +139,7 @@ function onKeyDown(event){
 }
 function onKeyUp (event) {
     if (event.keyCode === MEZERNIK_KOD) {
-        if (hraSnimkyPocitadlo === 0) {
-            start();
-        }
-        if (zdravi === 0) {
+        if (hraSnimkyPocitadlo === 0 || zdravi === 0) {
             start();
         }
         mezernikStisknuty = false;
@@ -149,7 +149,7 @@ function onMouseDown(event){
     mezernikStisknuty = true;
 }
 function onMouseUp (event) {
-    if (hraSnimkyPocitadlo === 0) {
+    if (hraSnimkyPocitadlo === 0 || zdravi === 0) {
         start();
     }
     mezernikStisknuty = false;
